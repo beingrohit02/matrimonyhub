@@ -1,0 +1,400 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  ANNULLED
+}
+
+enum Religion {
+  HINDU
+  MUSLIM
+  CHRISTIAN
+  SIKH
+  BUDDHIST
+  JAIN
+  JEWISH
+  OTHER
+  NONE
+}
+
+enum Diet {
+  VEGETARIAN
+  NON_VEGETARIAN
+  VEGAN
+  EGGETARIAN
+}
+
+enum DrinkingHabit {
+  NEVER
+  OCCASIONALLY
+  REGULARLY
+}
+
+enum SmokingHabit {
+  NEVER
+  OCCASIONALLY
+  REGULARLY
+}
+
+enum EducationLevel {
+  HIGH_SCHOOL
+  DIPLOMA
+  BACHELORS
+  MASTERS
+  PHD
+  PROFESSIONAL
+  OTHER
+}
+
+enum EmploymentType {
+  EMPLOYED
+  SELF_EMPLOYED
+  BUSINESS_OWNER
+  STUDENT
+  UNEMPLOYED
+  RETIRED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id                    String             @id @default(cuid())
+  email                 String             @unique
+  emailVerified         DateTime?
+  passwordHash          String?
+  name                  String?
+  image                 String?
+  role                  UserRole           @default(USER)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  lastLoginAt           DateTime?
+  isActive              Boolean            @default(true)
+  isBanned              Boolean            @default(false)
+  banReason             String?
+
+  // Profile
+  profile               Profile?
+
+  // Auth
+  accounts              Account[]
+  sessions              Session[]
+  verificationTokens    VerificationToken[]
+
+  // Interests
+  sentInterests         Interest[]         @relation("SentInterests")
+  receivedInterests     Interest[]         @relation("ReceivedInterests")
+
+  // Messages
+  sentMessages          Message[]          @relation("SentMessages")
+  receivedMessages      Message[]          @relation("ReceivedMessages")
+
+  // Notifications
+  notifications         Notification[]
+
+  // Reports
+  reportedUsers         Report[]           @relation("ReportedUsers")
+  reporterUsers         Report[]           @relation("ReporterUsers")
+
+  // Admin logs
+  adminActions          AdminLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic Info
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime
+  gender                Gender
+  maritalStatus         MaritalStatus      @default(NEVER_MARRIED)
+  height                Int?               // in cm
+  weight                Int?               // in kg
+  bloodGroup            String?
+  complexion            String?
+  bodyType              String?
+  physicalDisability    String?
+
+  // Location
+  country               String             @default("India")
+  state                 String?
+  city                  String?
+  pincode               String?
+  citizenship           String?
+  residencyStatus       String?
+
+  // Religion & Culture
+  religion              Religion
+  caste                 String?
+  subCaste              String?
+  motherTongue          String?
+  gotra                 String?
+  manglik               Boolean            @default(false)
+  starSign              String?
+
+  // Education & Career
+  educationLevel        EducationLevel?
+  educationField        String?
+  collegeName           String?
+  employmentType        EmploymentType?
+  occupation            String?
+  companyName           String?
+  annualIncome          String?
+  workLocation          String?
+
+  // Family
+  fatherName            String?
+  fatherOccupation      String?
+  motherName            String?
+  motherOccupation      String?
+  siblingsCount         Int                @default(0)
+  marriedSiblingsCount  Int                @default(0)
+  familyType            String?
+  familyValues          String?
+  familyStatus          String?
+
+  // Lifestyle
+  diet                  Diet?
+  drinkingHabit         DrinkingHabit      @default(NEVER)
+  smokingHabit          SmokingHabit       @default(NEVER)
+  hobbies               String[]
+  interests             String[]
+
+  // Partner Preferences
+  preferredAgeMin       Int                @default(18)
+  preferredAgeMax       Int                @default(60)
+  preferredHeightMin    Int?
+  preferredHeightMax    Int?
+  preferredMaritalStatus MaritalStatus[]
+  preferredReligion     Religion[]
+  preferredCaste        String?
+  preferredEducation    EducationLevel[]
+  preferredOccupation   String?
+  preferredLocation     String?
+  preferredIncome       String?
+  manglikPreference     Boolean            @default(false)
+
+  // Profile Media
+  photos                Photo[]
+  primaryPhotoId        String?
+
+  // Verification
+  verificationStatus    VerificationStatus @default(PENDING)
+  verificationRequested Boolean            @default(false)
+  verificationNotes     String?
+  verifiedAt            DateTime?
+  verifiedBy            String?
+
+  // Privacy & Settings
+  profileVisibility     Boolean            @default(true)
+  showContactInfo       Boolean            @default(false)
+  showLastLogin         Boolean            @default(true)
+  allowMessages         Boolean            @default(true)
+  emailNotifications    Boolean            @default(true)
+  smsNotifications      Boolean            @default(false)
+
+  // Stats
+  profileViews          Int                @default(0)
+  interestReceived      Int                @default(0)
+  interestSent          Int                @default(0)
+
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([gender])
+  @@index([city])
+  @@index([religion])
+  @@index([verificationStatus])
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url         String
+  caption     String?
+  isPrimary   Boolean  @default(false)
+  isVerified  Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([profileId])
+}
+
+model Interest {
+  id            String         @id @default(cuid())
+  senderId      String
+  sender        User           @relation("SentInterests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId    String
+  receiver      User           @relation("ReceivedInterests", fields: [receiverId], references: [id], onDelete: Cascade)
+  message       String?
+  status        InterestStatus @default(PENDING)
+  viewedAt      DateTime?
+  respondedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content     String   @db.Text
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reporter    User     @relation("ReporterUsers", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedId  String
+  reported    User     @relation("ReportedUsers", fields: [reportedId], references: [id], onDelete: Cascade)
+  reason      String
+  description String?  @db.Text
+  status      String   @default("PENDING")
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action    String
+  targetId  String?
+  targetType String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SiteSettings {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  value             Json
+  description       String?
+  updatedAt         DateTime @updatedAt
+}
+
+model PageContent {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  content     String   @db.Text
+  metaTitle   String?
+  metaDesc    String?
+  isPublished Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
